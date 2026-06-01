@@ -1,0 +1,13 @@
+# Build files and executables
+*.o
+bin/
+champsim*
+
+# Traces and large datasets
+*.trace
+*.xz
+*.gz
+dpc3_traces/
+
+# OS files
+.DS_Store
