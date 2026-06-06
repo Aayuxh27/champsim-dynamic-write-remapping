@@ -242,7 +242,7 @@ void CACHE::handle_writeback()
 
         // ---------------------------------------------------------------------------------------
         //PHASE 0 :Instrument LLC write traffic (Count once per packet)
-        if (cache_type == IS_LLC){
+        if (cache_type == IS_LLC && warmup_complete[writeback_cpu]) {
           set_write_count[set]++;
         }
         int way = check_hit(&WQ.entry[index]);
@@ -1063,7 +1063,16 @@ void CACHE::operate()
 
 uint32_t CACHE::get_set(uint64_t address)
 {
-    return (uint32_t) (address & ((1 << lg2(NUM_SET)) - 1)); 
+    uint32_t set = (uint32_t) (address & ((1 << lg2(NUM_SET)) - 1)); 
+
+    // Phase 2 & 3 : Static Mapping & Setting Static targets
+    if (cache_type == IS_LLC){
+      if (!split_targets[set].empty()){
+        uint32_t slot = (address >> 12) & 7; // 3 bits (14-12) for 8 slots
+        return split_targets[set][slot];
+      }
+    }
+    return set;
 }
 
 uint32_t CACHE::get_way(uint64_t address, uint32_t set)

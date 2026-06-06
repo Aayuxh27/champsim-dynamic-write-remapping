@@ -72,7 +72,7 @@ extern uint32_t PAGE_TABLE_LATENCY, SWAP_LATENCY;
 #define L2C_LATENCY 10  // 4/5 (L1I or L1D) + 10 = 14/15 cycles
 
 // LAST LEVEL CACHE
-#define LLC_SET NUM_CPUS*1024                   
+#define LLC_SET NUM_CPUS*4096              
 #define LLC_WAY 16
 #define LLC_RQ_SIZE NUM_CPUS*L2C_MSHR_SIZE //48
 #define LLC_WQ_SIZE NUM_CPUS*L2C_MSHR_SIZE //48
@@ -114,6 +114,8 @@ class CACHE : public MEMORY {
              roi_miss[NUM_CPUS][NUM_TYPES];
     
     std::vector<uint64_t> set_write_count; // for each set, count the number of writes to that set
+    std::vector<uint32_t> remap_table; // Phase 2 : remap table for static mapping in LLC
+    std::vector<std::vector<uint32_t>> split_targets; // phase 3 : target sets for each hotspot set in the LLC
 
     uint64_t total_miss_latency;
     
@@ -162,6 +164,12 @@ class CACHE : public MEMORY {
         pf_fill = 0;
 
         set_write_count.resize(NUM_SET, 0);
+
+        remap_table.resize(NUM_SET);
+        for (uint32_t i = 0; i <NUM_SET; i++){
+            remap_table[i] = i;
+        }
+        split_targets.resize(NUM_SET);
     };
 
     // destructor

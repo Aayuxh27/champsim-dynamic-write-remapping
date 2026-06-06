@@ -3,7 +3,30 @@
 // initialize replacement state
 void CACHE::llc_initialize_replacement()
 {
+    // Phase 2 : Static Remapping -- Hotspots sets -> Target sets
+    // Identified top 10 hotspot sets by profiling mcf workload
+    //remap_table[2701] = 39;
+    //remap_table[3579] = 40;
+    //remap_table[2511] = 41;
+    //remap_table[25]   = 42;
+    //remap_table[2538] = 43;
+    //remap_table[3316] = 49;
+    //remap_table[2706] = 51;
+    //remap_table[2707] = 59;
+    //remap_table[17]   = 60;
+    //remap_table[5]    = 64;
 
+    // Phase 3 : Split Remapping : each Hotspot fans out to 8 sets
+    split_targets[2701] = {39,40,41,42,43,46,49,51};
+    split_targets[3579] = {55,58,59,60,64,65,66,67};
+    split_targets[2511] = {68,69,70,71,72,73,74,76};
+    split_targets[25]   = {77,78,79,80,81,82,83,84};
+    split_targets[2538] = {85,86,87,88,89,90,91,92};
+    split_targets[3316] = {93,94,95,96,97,99,100,101};
+    split_targets[2706] = {102,103,104,105,106,107,108,109};
+    split_targets[2707] = {110,111,112,113,116,117,118,119};
+    split_targets[17]   = {123,127,128,129,130,131,132,133};
+    split_targets[5]    = {134,135,136,137,138,139,140,141};
 }
 
 // find replacement victim
@@ -81,5 +104,14 @@ void CACHE::llc_replacement_final_stats()
         cout << "Average writes per set   : " << avg_writes << endl;
         cout << "Hotspot severity         : " << hotspot_severity << "x" << endl;
         cout << "===========================================================\n" << endl;
+
+        // Per Set Output to analyze which set in particular has most writes
+        cout << "=== PER_SET_WRITE_COUNTS_START ===" << endl;
+        for (uint32_t i = 0; i <NUM_SET; i++){
+            if(set_write_count[i] > 0){
+                cout<< i <<" "<<set_write_count[i]<<endl;
+            }
+        }
+        cout << "=== PER_SET_WRITE_COUNTS_END ===" << endl;
     }
 }
