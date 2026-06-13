@@ -1,4 +1,6 @@
 #include "cache.h"
+#include <numeric>
+#include <algorithm>
 
 // initialize replacement state
 void CACHE::llc_initialize_replacement()
@@ -17,16 +19,16 @@ void CACHE::llc_initialize_replacement()
     //remap_table[5]    = 64;
 
     // Phase 3 : Split Remapping : each Hotspot fans out to 8 sets
-    split_targets[2701] = {39,40,41,42,43,46,49,51};
-    split_targets[3579] = {55,58,59,60,64,65,66,67};
-    split_targets[2511] = {68,69,70,71,72,73,74,76};
-    split_targets[25]   = {77,78,79,80,81,82,83,84};
-    split_targets[2538] = {85,86,87,88,89,90,91,92};
-    split_targets[3316] = {93,94,95,96,97,99,100,101};
-    split_targets[2706] = {102,103,104,105,106,107,108,109};
-    split_targets[2707] = {110,111,112,113,116,117,118,119};
-    split_targets[17]   = {123,127,128,129,130,131,132,133};
-    split_targets[5]    = {134,135,136,137,138,139,140,141};
+    //split_targets[2701] = {39,40,41,42,43,46,49,51};
+    //split_targets[3579] = {55,58,59,60,64,65,66,67};
+    //split_targets[2511] = {68,69,70,71,72,73,74,76};
+    //split_targets[25]   = {77,78,79,80,81,82,83,84};
+    //split_targets[2538] = {85,86,87,88,89,90,91,92};
+    //split_targets[3316] = {93,94,95,96,97,99,100,101};
+    //split_targets[2706] = {102,103,104,105,106,107,108,109};
+    //split_targets[2707] = {110,111,112,113,116,117,118,119};
+    //split_targets[17]   = {123,127,128,129,130,131,132,133};
+    //split_targets[5]    = {134,135,136,137,138,139,140,141};
 }
 
 // find replacement victim
@@ -68,6 +70,48 @@ void CACHE::llc_update_replacement_state(uint32_t cpu, uint32_t set, uint32_t wa
         return;
 
     return lru_update(set, way);
+}
+
+void CACHE::llc_epoch_update()
+{
+    uint64_t total = std::accumulate(epoch_write_count.begin(), epoch_write_count.end(), (uint64_t)0);
+    double avg = (double)total / NUM_SET;
+
+    std::vector<uint32_t> target_list;
+    std::vector<uint32_t> hot_list;
+
+    for (uint32_t i = 0; i < NUM_SET; i++){
+        if ((double)epoch_write_count[i] >= 2*avg){
+            hot_list.push_back(i);
+        }
+    }
+
+    //Identify target sets
+    for (uint32_t i = 0; i< NUM_SET; i++){
+         if ((double)epoch_write_count[i] < avg && std::find(hot_list.begin(), hot_list.end(), i) == hot_list.end()){
+            target_list.push_back(i);
+         }
+    }
+
+    // clearing the stale split targets hot_list
+    for (uint32_t i = 0; i < NUM_SET; i++){
+        split_targets[i].clear();
+    }
+    
+
+    // Assign targets to Hotspots
+    uint32_t target_idx = 0;
+    for (uint32_t h = 0; h < hot_list.size(); h++) {
+        if (target_idx + 8 <= target_list.size()) {
+            for (int s = 0; s < 8; s++) {
+                split_targets[hot_list[h]].push_back(target_list[target_idx++]);
+            }
+        }
+    }
+
+
+    // reset epoch counter
+    std::fill(epoch_write_count.begin(), epoch_write_count.end(), 0);
 }
 
 void CACHE::llc_replacement_final_stats()

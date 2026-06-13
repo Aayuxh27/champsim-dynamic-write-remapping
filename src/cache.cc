@@ -244,6 +244,7 @@ void CACHE::handle_writeback()
         //PHASE 0 :Instrument LLC write traffic (Count once per packet)
         if (cache_type == IS_LLC && warmup_complete[writeback_cpu]) {
           set_write_count[set]++;
+          epoch_write_count[set]++;
         }
         int way = check_hit(&WQ.entry[index]);
         //------------------------------------------------------------------------------------------
@@ -1059,6 +1060,9 @@ void CACHE::operate()
 
     if (PQ.occupancy && (reads_available_this_cycle > 0))
         handle_prefetch();
+
+    if (cache_type == IS_LLC && warmup_complete[cpu] && (current_core_cycle[cpu] % EPOCH_LENGTH) == 0)
+        llc_epoch_update();
 }
 
 uint32_t CACHE::get_set(uint64_t address)

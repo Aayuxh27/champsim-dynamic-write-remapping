@@ -80,6 +80,8 @@ extern uint32_t PAGE_TABLE_LATENCY, SWAP_LATENCY;
 #define LLC_MSHR_SIZE NUM_CPUS*64
 #define LLC_LATENCY 20  // 4/5 (L1I or L1D) + 10 + 20 = 34/35 cycles
 
+#define EPOCH_LENGTH 5000000   // 1 million cycles per epoch
+
 class CACHE : public MEMORY {
   public:
     uint32_t cpu;
@@ -91,6 +93,7 @@ class CACHE : public MEMORY {
     uint32_t MAX_READ, MAX_FILL;
     uint32_t reads_available_this_cycle;
     uint8_t cache_type;
+    
 
     // prefetch stats
     uint64_t pf_requested,
@@ -116,6 +119,7 @@ class CACHE : public MEMORY {
     std::vector<uint64_t> set_write_count; // for each set, count the number of writes to that set
     std::vector<uint32_t> remap_table; // Phase 2 : remap table for static mapping in LLC
     std::vector<std::vector<uint32_t>> split_targets; // phase 3 : target sets for each hotspot set in the LLC
+    std::vector<uint64_t> epoch_write_count;  // resets each epoch, used for hotspot detection
 
     uint64_t total_miss_latency;
     
@@ -170,6 +174,8 @@ class CACHE : public MEMORY {
             remap_table[i] = i;
         }
         split_targets.resize(NUM_SET);
+
+        epoch_write_count.resize(NUM_SET, 0);
     };
 
     // destructor
@@ -222,7 +228,8 @@ class CACHE : public MEMORY {
          //prefetcher_final_stats(),
          l1d_prefetcher_final_stats(),
          l2c_prefetcher_final_stats(),
-         llc_prefetcher_final_stats();
+         llc_prefetcher_final_stats(),
+         llc_epoch_update();
     void (*l1i_prefetcher_cache_operate)(uint32_t, uint64_t, uint8_t, uint8_t);
     void (*l1i_prefetcher_cache_fill)(uint32_t, uint64_t, uint32_t, uint32_t, uint8_t, uint64_t);
 
@@ -236,6 +243,7 @@ class CACHE : public MEMORY {
              find_victim(uint32_t cpu, uint64_t instr_id, uint32_t set, const BLOCK *current_set, uint64_t ip, uint64_t full_addr, uint32_t type),
              llc_find_victim(uint32_t cpu, uint64_t instr_id, uint32_t set, const BLOCK *current_set, uint64_t ip, uint64_t full_addr, uint32_t type),
              lru_victim(uint32_t cpu, uint64_t instr_id, uint32_t set, const BLOCK *current_set, uint64_t ip, uint64_t full_addr, uint32_t type);
+    
 };
 
 #endif
